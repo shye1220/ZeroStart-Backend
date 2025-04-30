@@ -3,13 +3,17 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2');
+const db = require('./db'); // 数据库连接
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+// 表创建逻辑
+db.query(`CREATE TABLE IF NOT EXISTS users (...)`, ...);
+
 // 配置 MySQL 数据库连接
-const db = mysql.createPool({
+const dbConnection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -21,7 +25,7 @@ const db = mysql.createPool({
 });
 
 // 测试数据库连接
-db.query('SELECT 1', (err, results) => {
+dbConnection.query('SELECT 1', (err, results) => {
   if (err) {
     console.error('Database connection test failed:', err);
   } else {
@@ -30,7 +34,7 @@ db.query('SELECT 1', (err, results) => {
 });
 
 // 创建 verification_codes 表
-db.query(`CREATE TABLE IF NOT EXISTS verification_codes (
+dbConnection.query(`CREATE TABLE IF NOT EXISTS verification_codes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
     code VARCHAR(6) NOT NULL,
@@ -97,7 +101,7 @@ app.post('/send-verification-code', (req, res) => {
 
     // 邮件发送成功后插入验证码到数据库
     const query = 'INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)';
-    db.query(query, [email, code, new Date(Date.now() + 5 * 60 * 1000)], (err, result) => {
+    dbConnection.query(query, [email, code, new Date(Date.now() + 5 * 60 * 1000)], (err, result) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ message: 'Database error' });
@@ -119,7 +123,7 @@ app.post('/register', (req, res) => {
 
   // 从数据库中查询验证码
   const query = 'SELECT * FROM verification_codes WHERE email = ? AND code = ? AND expires_at > NOW()';
-  db.query(query, [email, code], (err, results) => {
+  dbConnection.query(query, [email, code], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: 'Database error' });
@@ -131,7 +135,7 @@ app.post('/register', (req, res) => {
 
     // 验证通过，检查邮箱是否已存在
     const checkQuery = 'SELECT * FROM users WHERE email = ?';
-    db.query(checkQuery, [email], (err, results) => {
+    dbConnection.query(checkQuery, [email], (err, results) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ message: 'Database error' });
@@ -144,7 +148,7 @@ app.post('/register', (req, res) => {
       // 插入用户信息
       const zeroId = `Zero${Date.now()}`;
       const insertQuery = 'INSERT INTO users (email, password, zero_id) VALUES (?, ?, ?)';
-      db.query(insertQuery, [email, password, zeroId], (err, result) => {
+      dbConnection.query(insertQuery, [email, password, zeroId], (err, result) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ message: 'Failed to register user' });
@@ -152,7 +156,7 @@ app.post('/register', (req, res) => {
 
         // 删除已使用的验证码
         const deleteQuery = 'DELETE FROM verification_codes WHERE email = ?';
-        db.query(deleteQuery, [email]);
+        dbConnection.query(deleteQuery, [email]);
 
         res.status(200).json({ message: 'Registration successful', zeroId });
       });
@@ -169,7 +173,7 @@ app.post('/login', (req, res) => {
   }
 
   const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
-  db.query(query, [email, password], (err, results) => {
+  dbConnection.query(query, [email, password], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: 'Database error' });
@@ -192,7 +196,7 @@ app.get('/user-info', (req, res) => {
   }
 
   const query = 'SELECT email, zero_id FROM users WHERE zero_id = ?';
-  db.query(query, [zeroId], (err, results) => {
+  dbConnection.query(query, [zeroId], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: 'Database error' });
@@ -215,7 +219,7 @@ app.post('/reset-password', (req, res) => {
   }
 
   const query = 'SELECT * FROM verification_codes WHERE email = ? AND code = ? AND expires_at > NOW()';
-  db.query(query, [email, code], (err, results) => {
+  dbConnection.query(query, [email, code], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: 'Database error' });
@@ -226,7 +230,7 @@ app.post('/reset-password', (req, res) => {
     }
 
     const updateQuery = 'UPDATE users SET password = ? WHERE email = ?';
-    db.query(updateQuery, [newPassword, email], (err, result) => {
+    dbConnection.query(updateQuery, [newPassword, email], (err, result) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ message: 'Failed to reset password' });
@@ -238,5 +242,5 @@ app.post('/reset-password', (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('ZeroStart Backend is running on port 3000.');
+    console.log('Server is running on port 3000');
 });
