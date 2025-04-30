@@ -10,10 +10,11 @@ app.use(cors());
 
 // 配置 MySQL 数据库连接
 const db = mysql.createConnection({
-  host: 'localhost', // 数据库地址
-  user: 'root',      // 数据库用户名
-  password: 'Shuye123', // 数据库密码
-  database: 'ZeroStart',     // 数据库名称
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
 });
 
 // 连接数据库
