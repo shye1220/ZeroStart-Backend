@@ -10,18 +10,29 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // 表创建逻辑
-db.query(`CREATE TABLE IF NOT EXISTS users (...)`, ...);
+db.query(`CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    zero_id VARCHAR(255) NOT NULL UNIQUE
+);`, (err, result) => {
+    if (err) {
+        console.error('Failed to create users table:', err);
+    } else {
+        console.log('users table created successfully.');
+    }
+});
 
 // 配置 MySQL 数据库连接
 const dbConnection = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  waitForConnections: true,
-  connectionLimit: 10, // 最大连接数
-  queueLimit: 0,       // 队列限制
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
 });
 
 // 测试数据库连接
@@ -31,6 +42,14 @@ dbConnection.query('SELECT 1', (err, results) => {
   } else {
     console.log('Database connection test successful:', results);
   }
+});
+
+dbConnection.query('SELECT DATABASE()', (err, results) => {
+    if (err) {
+        console.error('Database connection test failed:', err);
+    } else {
+        console.log('Connected to database:', results[0]['DATABASE()']);
+    }
 });
 
 // 创建 verification_codes 表
