@@ -9,21 +9,24 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // 配置 MySQL 数据库连接
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
+  waitForConnections: true,
+  connectionLimit: 10, // 最大连接数
+  queueLimit: 0,       // 队列限制
 });
 
-// 连接数据库
-db.connect(err => {
+// 测试数据库连接
+db.query('SELECT 1', (err, results) => {
   if (err) {
-    console.error('Failed to connect to MySQL:', err);
-    process.exit(1);
+    console.error('Database connection test failed:', err);
+  } else {
+    console.log('Database connection test successful:', results);
   }
-  console.log('Connected to MySQL database.');
 });
 
 // 创建 verification_codes 表
@@ -47,6 +50,20 @@ const transporter = nodemailer.createTransport({
     user: 'liwenquan1220@gmail.com', // 新的 Gmail 地址
     pass: 'bjgkacncfzvomeau', // 应用专用密码
   },
+});
+
+// 测试邮件发送
+transporter.sendMail({
+  from: process.env.EMAIL_USER,
+  to: 'test@example.com',
+  subject: 'Test Email',
+  text: 'This is a test email from ZeroStart Backend.',
+}, (error, info) => {
+  if (error) {
+    console.error('Test email failed:', error);
+  } else {
+    console.log('Test email sent:', info.response);
+  }
 });
 
 // 测试接口
